@@ -1,162 +1,3 @@
-// import React, {useEffect, useState} from 'react';
-// import {
-//   View,
-//   Text,
-//   StyleSheet,
-//   FlatList,
-//   Image,
-//   TextInput,
-//   ActivityIndicator,
-//   TouchableOpacity,
-//   RefreshControl,
-// } from 'react-native';
-// import {useDispatch, useSelector} from 'react-redux';
-// import {fetchProducts} from '../redux/ProductSlice';
-
-// const ProductScreen = () => {
-//   const dispatch = useDispatch();
-//   const {products, loading, error} = useSelector(state => state.products);
-//   const [searchQuery, setSearchQuery] = useState('');
-//   const [filteredProducts, setFilteredProducts] = useState([]);
-
-//   useEffect(() => {
-//     dispatch(fetchProducts());
-//   }, [dispatch]);
-
-//   useEffect(() => {
-//     setFilteredProducts(
-//       products.filter(product =>
-//         product.title.toLowerCase().includes(searchQuery.toLowerCase()),
-//       ),
-//     );
-//   }, [products, searchQuery]);
-
-//   const handleSearch = text => {
-//     setSearchQuery(text);
-//   };
-
-//   const renderProduct = ({item}) => (
-//     <TouchableOpacity style={styles.productCard}>
-//       <Image source={{uri: item.image}} style={styles.productImage} />
-//       <Text style={styles.productTitle} numberOfLines={2}>
-//         {item.title}
-//       </Text>
-//       <Text style={styles.productPrice}>${item.price.toFixed(2)}</Text>
-//     </TouchableOpacity>
-//   );
-
-//   if (loading) {
-//     return (
-//       <View style={styles.loaderContainer}>
-//         <ActivityIndicator size="large" color="#6200EE" />
-//       </View>
-//     );
-//   }
-
-//   if (error) {
-//     return (
-//       <View style={styles.loaderContainer}>
-//         <Text style={styles.errorText}>
-//           Failed to load products. Please try again.
-//         </Text>
-//       </View>
-//     );
-//   }
-
-//   return (
-//     <View style={styles.container}>
-//       <View style={styles.header}>
-//         <Text style={styles.headerTitle}>ShopApp</Text>
-//         <TextInput
-//           style={styles.searchBar}
-//           placeholder="Search products..."
-//           value={searchQuery}
-//           onChangeText={handleSearch}
-//         />
-//       </View>
-
-//       <FlatList
-//         data={filteredProducts}
-//         keyExtractor={item => item.id.toString()}
-//         renderItem={renderProduct}
-//         numColumns={2}
-//         refreshControl={
-//           <RefreshControl
-//             refreshing={loading}
-//             onRefresh={() => dispatch(fetchProducts())}
-//           />
-//         }
-//         contentContainerStyle={styles.productGrid}
-//       />
-//     </View>
-//   );
-// };
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     backgroundColor: '#F5F5F5',
-//   },
-//   header: {
-//     backgroundColor: '#6200EE',
-//     padding: 16,
-//     flexDirection: 'column',
-//     alignItems: 'center',
-//   },
-//   headerTitle: {
-//     color: '#FFFFFF',
-//     fontSize: 24,
-//     fontWeight: 'bold',
-//   },
-//   searchBar: {
-//     marginTop: 8,
-//     backgroundColor: '#FFFFFF',
-//     borderRadius: 8,
-//     paddingHorizontal: 12,
-//     height: 40,
-//     width: '100%',
-//   },
-//   productGrid: {
-//     padding: 8,
-//   },
-//   productCard: {
-//     flex: 1,
-//     backgroundColor: '#FFFFFF',
-//     borderRadius: 8,
-//     margin: 8,
-//     padding: 8,
-//     alignItems: 'center',
-//     elevation: 2,
-//   },
-//   productImage: {
-//     width: 100,
-//     height: 100,
-//     resizeMode: 'contain',
-//   },
-//   productTitle: {
-//     marginTop: 8,
-//     fontSize: 14,
-//     fontWeight: 'bold',
-//     textAlign: 'center',
-//   },
-//   productPrice: {
-//     marginTop: 4,
-//     fontSize: 16,
-//     color: '#6200EE',
-//   },
-//   loaderContainer: {
-//     flex: 1,
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//   },
-//   errorText: {
-//     color: 'red',
-//     fontSize: 16,
-//   },
-// });
-
-// export default ProductScreen;
-
 import React, {useEffect, useState} from 'react';
 import {
   View,
@@ -166,103 +7,119 @@ import {
   Image,
   TextInput,
   TouchableOpacity,
-  RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import {useDispatch, useSelector} from 'react-redux';
-import ContentLoader, {Rect, Circle} from 'react-content-loader/native';
 import {fetchProducts} from '../redux/ProductSlice';
+import {addToCart} from '../redux/cartSlice';
+import {toggleFavorite} from '../redux/favouriteSlice';
+import ProductPlaceholder from '../components/ProductPlaceholder';
+import Banner from '../components/Banner';
+import Header from '../components/Header';
 
-const PlaceholderCard = () => (
-  <ContentLoader
-    speed={2}
-    width={150}
-    height={200}
-    viewBox="0 0 150 200"
-    backgroundColor="#f3f3f3"
-    foregroundColor="#ecebeb">
-    <Rect x="25" y="10" rx="8" ry="8" width="100" height="100" />
-    <Rect x="10" y="120" rx="4" ry="4" width="130" height="20" />
-    <Rect x="35" y="150" rx="4" ry="4" width="80" height="20" />
-  </ContentLoader>
-);
-
-const App = () => {
+const ProductScreen = () => {
   const dispatch = useDispatch();
-  const {products, loading, error} = useSelector(state => state.products);
+  const {products, loading, error, page, hasMore} = useSelector(
+    state => state.products,
+  );
+  const cart = useSelector(state => state.cart);
+  const favorites = useSelector(state => state.favorites);
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredProducts, setFilteredProducts] = useState([]);
+  const itemsPerPage = 10;
 
   useEffect(() => {
-    dispatch(fetchProducts());
+    dispatch(fetchProducts({page: 1, limit: itemsPerPage}));
   }, [dispatch]);
 
-  useEffect(() => {
-    setFilteredProducts(
-      products.filter(product =>
-        product.title.toLowerCase().includes(searchQuery.toLowerCase()),
-      ),
-    );
-  }, [products, searchQuery]);
-
-  const handleSearch = text => {
-    setSearchQuery(text);
-  };
-
-  const renderProduct = ({item}) => (
-    <TouchableOpacity style={styles.productCard}>
-      <Image source={{uri: item.image}} style={styles.productImage} />
-      <Text style={styles.productTitle} numberOfLines={2}>
-        {item.title}
-      </Text>
-      <Text style={styles.productPrice}>${item.price.toFixed(2)}</Text>
-    </TouchableOpacity>
+  const filteredProducts = products.filter(product =>
+    product.title.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  const renderPlaceholder = () => (
+  const handleAddToCart = product => {
+    dispatch(addToCart(product));
+  };
+
+  const handleToggleFavorite = productId => {
+    dispatch(toggleFavorite(productId));
+  };
+
+  const renderProduct = ({item}) => {
+    const isFavorite = favorites.includes(item.id);
+    return (
+      <View style={styles.productCard}>
+        <Image source={{uri: item.image}} style={styles.productImage} />
+        <Text style={styles.productTitle} numberOfLines={2}>
+          {item.title}
+        </Text>
+        <Text style={styles.productPrice}>${item.price.toFixed(2)}</Text>
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={styles.cartButton}
+            onPress={() => handleAddToCart(item)}>
+            <Text style={styles.cartButtonText}>Add to Cart</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleToggleFavorite(item.id)}>
+            <Text
+              style={[
+                styles.heartIcon,
+                isFavorite ? styles.heartActive : null,
+              ]}>
+              ♥
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
+  const loadMoreProducts = () => {
+    if (!loading && hasMore) {
+      dispatch(fetchProducts({page: page + 1, limit: itemsPerPage}));
+    }
+  };
+
+  const renderPlaceholders = ({item}) => (
     <View style={styles.productCard}>
-      <PlaceholderCard />
+      <ProductPlaceholder />
     </View>
   );
 
+  const renderListFooter = () =>
+    loading && <ActivityIndicator size={30} color="#483298" />;
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>ShopApp</Text>
-        <TextInput
-          style={styles.searchBar}
-          placeholder="Search products..."
-          value={searchQuery}
-          onChangeText={handleSearch}
-        />
-      </View>
+      <Header
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        cartCount={cart.length}
+      />
+
+      <Banner />
+
+      <Text style={styles.sectionTitle}>Popular Products</Text>
 
       {loading ? (
         <FlatList
-          data={[1, 2, 3, 4, 5, 6]} // Placeholder items
-          keyExtractor={item => item.toString()}
-          renderItem={renderPlaceholder}
+          data={[1, 2, 3, 4, 5, 6]} // Placeholder data
+          keyExtractor={item => `placeholder_${item}`} // Unique keys for placeholders
+          renderItem={renderPlaceholders}
           numColumns={2}
           contentContainerStyle={styles.productGrid}
         />
       ) : error ? (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>
-            Failed to load products. Please try again.
-          </Text>
-        </View>
+        <Text style={styles.errorText}>Failed to load products</Text>
       ) : (
         <FlatList
           data={filteredProducts}
-          keyExtractor={item => item.id.toString()}
+          keyExtractor={item => `product_${item.id}`} // Unique keys for products
           renderItem={renderProduct}
           numColumns={2}
-          refreshControl={
-            <RefreshControl
-              refreshing={loading}
-              onRefresh={() => dispatch(fetchProducts())}
-            />
-          }
           contentContainerStyle={styles.productGrid}
+          onEndReached={loadMoreProducts}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={renderListFooter}
         />
       )}
     </View>
@@ -272,38 +129,26 @@ const App = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#fff',
   },
-  header: {
-    backgroundColor: '#6200EE',
-    padding: 16,
-    flexDirection: 'column',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  searchBar: {
-    marginTop: 8,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    height: 40,
-    width: '100%',
+
+  sectionTitle: {
+    fontSize: 18,
+    fontFamily: 'Poppins-Bold',
+    marginHorizontal: 8,
+    marginVertical: 8,
   },
   productGrid: {
-    padding: 8,
+    paddingHorizontal: 8,
   },
   productCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
+    backgroundColor: '#f9f9f9',
     margin: 8,
-    padding: 8,
+    padding: 12,
+    borderRadius: 8,
     alignItems: 'center',
-    elevation: 2,
+    // elevation: 2,
   },
   productImage: {
     width: 100,
@@ -311,25 +156,50 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   productTitle: {
-    marginTop: 8,
     fontSize: 14,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins-Regular',
     textAlign: 'center',
+    marginVertical: 8,
   },
   productPrice: {
-    marginTop: 4,
     fontSize: 16,
     color: '#6200EE',
+    marginBottom: 8,
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  actionRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  cartButton: {
+    backgroundColor: '#483298',
+    padding: 8,
+    borderRadius: 8,
+    flex: 1,
+    marginRight: 8,
+  },
+  cartButtonText: {
+    color: '#fff',
+    textAlign: 'center',
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+  },
+  heartIcon: {
+    fontSize: 16,
+    color: '#999',
+  },
+  heartActive: {
+    color: '#da7772',
+  },
+  loadingText: {
+    textAlign: 'center',
+    marginTop: 20,
   },
   errorText: {
+    textAlign: 'center',
+    marginTop: 20,
     color: 'red',
-    fontSize: 16,
   },
 });
-
-export default App;
+export default ProductScreen;

@@ -2,11 +2,11 @@ import {createAsyncThunk, createSlice} from '@reduxjs/toolkit';
 
 export const fetchProducts = createAsyncThunk(
   'products/fetchProducts',
-  async () => {
-    const response = await fetch('https://fakestoreapi.com/products');
-    if (!response.ok) {
-      throw new Error('Failed to fetch products');
-    }
+  async ({page, limit}) => {
+    const response = await fetch(
+      `https://fakestoreapi.com/products?_page=${page}&_limit=${limit}`,
+    );
+    if (!response.ok) throw new Error('Failed to fetch products');
     return await response.json();
   },
 );
@@ -17,7 +17,10 @@ const productSlice = createSlice({
     products: [],
     loading: false,
     error: null,
+    page: 1,
+    hasMore: true,
   },
+  reducers: {},
   extraReducers: builder => {
     builder
       .addCase(fetchProducts.pending, state => {
@@ -26,7 +29,11 @@ const productSlice = createSlice({
       })
       .addCase(fetchProducts.fulfilled, (state, action) => {
         state.loading = false;
-        state.products = action.payload;
+        if (action.payload.length === 0) {
+          state.hasMore = false; // No more products to load
+        } else {
+          state.products = [...state.products, ...action.payload]; // Append new products
+        }
       })
       .addCase(fetchProducts.rejected, (state, action) => {
         state.loading = false;
